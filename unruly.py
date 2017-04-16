@@ -68,10 +68,9 @@ class Cell(object):
 
 
 class Game(object):
-    def __init__(self, files):
+    def __init__(self, files, boxsize=32):
         self.files = files.copy()
-        self.numRows = None
-        self.numCols = None
+        self.boxsize = boxsize
         self._load_game_state()
 
     # init
@@ -91,15 +90,12 @@ class Game(object):
         self._deltax = self._maxx - self._minx
         self._deltay = self._maxy - self._miny
 
-        n = round(len(cells) ** .5)
-        self.numCols = self.numCols or n
-        self.numRows = self.numRows or n
-        self._boxWidth = round(self._deltax / self.numRows)
-        self._boxHeight = round(self._deltay / self.numCols)
+        self.numCols = round(self._deltax / self.boxsize)
+        self.numRows = round(self._deltay / self.boxsize)
 
         for (l, t, w, h, c) in cells:
-            ix = round((l - self._minx) / self._boxWidth)
-            iy = round((t - self._miny) / self._boxHeight)
+            ix = round((l - self._minx) / self.boxsize)
+            iy = round((t - self._miny) / self.boxsize)
 
             self.state[ix, iy] = Cell(l, t, w, h, c)
 
@@ -107,6 +103,25 @@ class Game(object):
         self._miniy = min(iy for (ix, iy) in self.state)
         self._maxix = max(ix for (ix, iy) in self.state)
         self._maxiy = max(iy for (ix, iy) in self.state)
+
+        # fill in any gaps that may exist
+        for ix in range(self._maxix + 1):
+            for iy in range(self._maxiy + 1):
+                if not (ix, iy) in self.state:
+                    if ix == 0:
+                        l = self._minx
+                    else:
+                        l = self.state[ix - 1, iy].left + self.boxsize
+
+                    if iy == 0:
+                        t = self._miny
+                    else:
+                        t = self.state[ix, iy - 1].top + self.boxsize
+                    w = self.boxsize
+                    h = self.boxsize
+                    c = 'clear'
+                    cells.append((l, t, w, h, c))
+                    self.state[ix, iy] = Cell(l, t, w, h, c)
 
         self.cells = cells
 
